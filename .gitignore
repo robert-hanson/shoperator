@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.local
+*.tsbuildinfo
+.turbo/
+
+# Vite
+apps/web/dist/
+
+# DB
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+interface PageShellProps {
+  children: React.ReactNode
+  className?: string
+}
+
+export function PageShell({ children, className = '' }: PageShellProps) {
+  return (
+    <main className={`max-w-5xl mx-auto px-4 py-8 ${className}`}>
+      {children}
+    </main>
+  )
+}
