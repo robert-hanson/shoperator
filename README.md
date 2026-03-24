@@ -8,7 +8,7 @@ Compare unit prices across grocery stores. Pick a product category, select an it
 
 - [Node.js](https://nodejs.org) v20+
 - [pnpm](https://pnpm.io) v9+ — `npm install -g pnpm`
-- [Docker](https://www.docker.com) (for local PostgreSQL)
+- A [Neon](https://neon.tech) account (free) for the database
 
 ---
 
@@ -23,39 +23,43 @@ pnpm install
 ### 2. Configure environment
 
 ```bash
-cp .env.example .env
+cp .env.example apps/api/.env
 ```
 
-Edit `.env` and set:
+Edit `apps/api/.env` and set:
 
-| Variable | Description | Default |
+| Variable | Description | Example |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://shoperator:shoperator@localhost:5432/shoperator` |
-| `ADMIN_TOKEN` | Secret token for the admin UI | *(change this)* |
+| `DATABASE_URL` | Neon connection string | `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require` |
+| `ADMIN_TOKEN` | Secret token for the admin UI | `openssl rand -hex 32` |
 | `PORT` | API server port | `3001` |
 | `CORS_ORIGIN` | Web app origin (for CORS) | `http://localhost:5173` |
 
-### 3. Start PostgreSQL
+Create a free project at [neon.tech](https://neon.tech) and paste the connection string as `DATABASE_URL`.
+
+### 3. Generate and run database migrations
+
+If the `apps/api/src/db/migrations/` folder doesn't exist yet, generate it first:
 
 ```bash
-docker compose up -d
+cd apps/api && pnpm exec drizzle-kit generate && cd ../..
 ```
 
-### 4. Run database migrations
+Then apply migrations:
 
 ```bash
 pnpm db:migrate
 ```
 
-### 5. Seed initial product data
+### 4. Seed initial product data
 
 ```bash
 pnpm db:seed
 ```
 
-This loads 12 real products across 6 categories (cold brew coffee, baby wipes, olive oil, eggs, butter, dish soap) for both Costco and Aldi.
+This loads sample products across categories (cold brew coffee, baby wipes, olive oil, eggs, butter, dish soap) for both Costco and Aldi.
 
-### 6. Start the development servers
+### 5. Start the development servers
 
 ```bash
 pnpm dev
@@ -184,19 +188,28 @@ The API runs a daily cron job (2am) that flags any product not updated in the la
 
 ## Deployment
 
-The app is designed to deploy to **Railway** (API + Postgres) + **Vercel** (web).
+The app deploys to **Render** (API) + **Vercel** (web) + **Neon** (database).
 
-### API (Railway)
+### Database (Neon)
 
-1. Create a new Railway project, add a PostgreSQL plugin
-2. Deploy the `apps/api` service, set env vars from `.env.example`
-3. Run `pnpm db:migrate` and `pnpm db:seed` via Railway's shell
+1. Create a project at [neon.tech](https://neon.tech)
+2. Run migrations: `pnpm db:migrate` (with `DATABASE_URL` set)
+3. Optionally seed: `pnpm db:seed`
+
+### API (Render)
+
+1. Create a new Web Service at [render.com](https://render.com), connect this repo
+2. Set: Language = Docker, Dockerfile Path = `apps/api/Dockerfile`, Docker Context = `.`
+3. Instance type: Free, Region: Oregon
+4. Set env vars: `DATABASE_URL`, `ADMIN_TOKEN`, `CORS_ORIGIN` (your Vercel URL), `NODE_ENV=production`, `PORT=3001`
+
+To prevent Render's free tier from spinning down, set up a free [UptimeRobot](https://uptimerobot.com) monitor pinging `/health` every 10 minutes.
 
 ### Web (Vercel)
 
-1. Connect the repo to Vercel
-2. Set the root directory to `apps/web`
-3. Set `VITE_API_URL` to your Railway API URL if not using a proxy
+1. Import the repo at [vercel.com](https://vercel.com)
+2. Set root directory to `apps/web`, framework = Vite
+3. `apps/web/vercel.json` proxies `/api/*` to your Render URL — update it if your Render URL differs from `shoperator-api.onrender.com`
 
 ---
 
@@ -213,4 +226,4 @@ The app is designed to deploy to **Railway** (API + Postgres) + **Vercel** (web)
 | ORM | Drizzle ORM |
 | Shared types | pnpm workspace package |
 | Tests | Vitest |
-| Containers | Docker Compose (local dev) |
+| Database hosting | Neon (serverless Postgres) |
