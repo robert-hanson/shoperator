@@ -10,56 +10,57 @@ A web app for comparing grocery prices across stores (starting with Costco and A
 - Adding more stores over time should require minimal effort
 - An admin interface allows curating and maintaining product/price data
 
+## Core Domain
+
+- Unit price normalization is the core value — always calculate per-unit cost when comparing across stores
+- Business logic: `packages/shared/src/utils/priceCalc.ts` (price normalization, savings %) and `unitNormalizer.ts` (unit conversions)
+- Types: `packages/shared/src/types/`
+- All calculation/utility code in `packages/shared` must have unit tests (Vitest); tests live alongside source files
+
+## Commands
+
+```
+pnpm dev           # start API + web together
+pnpm test          # run all tests
+pnpm typecheck     # TypeScript check across all workspaces
+pnpm lint          # ESLint across all workspaces
+pnpm build         # build all packages in order (shared → api → web)
+pnpm db:migrate    # run DB migrations
+pnpm db:seed       # seed the database
+```
+
+After making changes: `pnpm typecheck && pnpm test`
+
+## Environment Setup
+
+Copy `apps/api/.env.example` to `apps/api/.env`. Required variables:
+- `DATABASE_URL` — PostgreSQL connection string
+- `ADMIN_TOKEN` — secret token for admin endpoints (min 8 chars)
+
+## Project Structure
+
+pnpm monorepo: `apps/api` (Express + Drizzle ORM + PostgreSQL), `apps/web` (React + Vite + Tailwind), `packages/shared` (types + utils). Build shared before apps.
+
+## Non-Negotiable Rules
+
+- TypeScript strict mode — no `any` types
+- Admin routes require `ADMIN_TOKEN` authentication
+- Parameterized queries only — never concatenate user input into SQL
+- Mobile-first CSS — design for 375px wide first, then scale up
+- Touch targets ≥ 44×44px
+- Show loading skeletons for async data, never blank screens
+- Don't hardcode prices or product data in the frontend
+- Color is never the only way to convey information (winners need a label, not just green)
+- Empty states must guide the user ("No products found — add one in admin")
+
 ## Design Principles
 
-- **Web-first, mobile-first**: The primary experience is a responsive website. Design for small screens first, then scale up. Touch targets must be at least 44×44px.
-- **Simple and obvious**: Users should be able to compare prices in 3 taps with no instructions. Avoid forms and text input in the main flow.
-- **Sleek and clean**: Minimal UI, clear typography, intentional whitespace. Not cluttered.
-- **Fast**: Pages should feel instant. Show loading skeletons, not blank screens.
-
-## Development Best Practices
-
-### Code Quality
-- TypeScript strict mode always — no `any` types
-- Business logic (unit math, price calculations) must have unit tests
-- Keep functions small and single-purpose
-- Don't add abstractions until you need them 3 times
-
-### Responsive Design
-- Mobile-first CSS — design for ~375px wide first, then add breakpoints
-- No fixed pixel widths on containers — use max-width, flexbox, grid
-- Test on real mobile viewports before considering something done
-
-### Accessibility
-- Semantic HTML (`<main>`, `<nav>`, `<button>`, not `<div>` for everything)
-- All interactive elements must be keyboard-navigable
-- Images need meaningful `alt` text
-- Color is never the only way to convey information (e.g. winners need a label, not just green)
-- Form inputs need associated `<label>` elements
-
-### Performance
-- Lazy-load below-the-fold content
-- Show loading skeletons for any async data
-- Avoid layout shifts — reserve space for images before they load
-
-### Security
-- Never commit secrets — all credentials via environment variables
-- Validate and sanitize all user input on the server
-- Use parameterized queries — never concatenate user input into SQL
-- Admin routes must require authentication
-
-### Error Handling
-- Show user-friendly error messages, not raw error objects
-- Empty states should guide the user ("No products found — add one in admin")
-- If a request takes >1.5s, show a loading indicator
-
-### Testing
-- Unit test all calculation/utility logic
-- Test edge cases: zero prices, unit conversions, packs of multiple items
+- **Simple and obvious**: Users should be able to compare prices in 3 taps with no instructions
+- **Sleek and clean**: Minimal UI, clear typography, intentional whitespace
+- **Fast**: Pages should feel instant
 
 ## What NOT to Do
-- Don't hardcode prices or product data in the frontend
+
 - Don't use `any` in TypeScript
-- Don't design only for desktop
 - Don't skip loading/error states
 - Don't add features that weren't asked for
