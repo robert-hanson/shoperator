@@ -8,6 +8,8 @@ import { variantsRouter } from './routes/variants.js'
 import { comparisonRouter } from './routes/comparison.js'
 import { adminRouter } from './routes/admin.js'
 import { startStalenessChecker } from './jobs/stalenessChecker.js'
+import { startPriceRefreshJob } from './jobs/priceRefreshJob.js'
+import { startScraperHealthCheck } from './jobs/scraperHealthCheck.js'
 
 const app = express()
 
@@ -33,4 +35,6 @@ app.listen(env.PORT, () => {
 
 if (env.NODE_ENV !== 'test') {
   startStalenessChecker()
+  startPriceRefreshJob()
+  startScraperHealthCheck()
 }

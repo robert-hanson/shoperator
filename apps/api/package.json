@@ -10,16 +10,18 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "refresh-prices": "tsx src/scripts/refreshPrices.ts"
   },
   "dependencies": {
     "@shoperator/shared": "workspace:*",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.10",
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
     "pg": "^8.11.5",
-    "dotenv": "^16.4.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

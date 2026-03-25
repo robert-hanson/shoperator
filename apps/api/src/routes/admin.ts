@@ -4,6 +4,8 @@ import { db } from '../config/database.js'
 import { storeVariants } from '../db/schema.js'
 import { adminAuth } from '../middleware/adminAuth.js'
 import { scrapeAssist } from '../services/scrapeAssistService.js'
+import { runPriceRefresh } from '../jobs/priceRefreshJob.js'
+import { getScraperHealth } from '../jobs/scraperHealthCheck.js'
 
 import type { Router as RouterType } from "express"
 export const adminRouter: RouterType = Router()
@@ -109,6 +111,21 @@ adminRouter.post('/scrape-assist', async (req, res, next) => {
     }
     const suggestion = await scrapeAssist(url)
     res.json(suggestion)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /api/v1/admin/scraper-health
+adminRouter.get('/scraper-health', (_req, res) => {
+  res.json(getScraperHealth())
+})
+
+// POST /api/v1/admin/refresh-prices
+adminRouter.post('/refresh-prices', async (_req, res, next) => {
+  try {
+    const result = await runPriceRefresh()
+    res.json(result)
   } catch (err) {
     next(err)
   }

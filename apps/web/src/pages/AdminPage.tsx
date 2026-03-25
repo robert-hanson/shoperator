@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api'
+import type { ScraperHealth, RefreshResult, RefreshFailure } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatPrice, STORES } from '@shoperator/shared'
 import type { StoreVariant } from '@shoperator/shared'
-import { Lock, CheckCircle, Trash2, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { Lock, CheckCircle, Trash2, Link as LinkIcon, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 
 export function AdminPage() {
   const [token, setToken] = useState('')
@@ -78,6 +79,12 @@ function AdminDashboard({ token }: { token: string }) {
         <p className="text-muted-foreground mt-1 text-sm">Manage products and price data.</p>
       </div>
 
+      {/* Scraper health */}
+      <ScraperHealthSection token={token} />
+
+      {/* Price refresh */}
+      <PriceRefreshSection token={token} />
+
       {/* Stale queue */}
       <section>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -114,6 +121,167 @@ function AdminDashboard({ token }: { token: string }) {
 
       {/* Add product */}
       <AddProductSection token={token} />
+    </div>
+  )
+}
+
+function ScraperHealthSection({ token }: { token: string }) {
+  const client = adminApi(token)
+
+  const { data: health, isLoading } = useQuery<ScraperHealth>({
+    queryKey: ['admin', 'scraper-health'],
+    queryFn: () => client.scraperHealth(),
+  })
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold mb-3">Scraper Health</h2>
+      <Card>
+        <CardContent className="pt-6">
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : !health ? (
+            <p className="text-sm text-muted-foreground">Unable to load scraper status.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {(['costco', 'aldi'] as const).map((storeId) => {
+                const store = STORES[storeId]
+                const status = health[storeId]
+                return (
+                  <div key={storeId} className="flex items-start gap-3">
+                    <div
+                      className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                      style={{ backgroundColor: store.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{store.name}</span>
+                        {status.healthy ? (
+                          <Badge variant="default" className="text-xs bg-green-600">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Healthy
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Broken
+                          </Badge>
+                        )}
+                      </div>
+                      {status.lastChecked && (
+                        <p className="text-xs text-muted-foreground">
+                          Last checked: {new Date(status.lastChecked).toLocaleString()}
+                        </p>
+                      )}
+                      {!status.healthy && status.error && (
+                        <p className="text-xs text-destructive mt-0.5">{status.error}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {!health.costco.lastChecked && !health.aldi.lastChecked && (
+                <p className="text-xs text-muted-foreground">
+                  First health check runs on server startup — check back shortly.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+function PriceRefreshSection({ token }: { token: string }) {
+  const client = adminApi(token)
+  const queryClient = useQueryClient()
+  const [lastResult, setLastResult] = useState<RefreshResult | null>(null)
+
+  const refreshMutation = useMutation({
+    mutationFn: () => client.refreshPrices(),
+    onSuccess: (result) => {
+      setLastResult(result)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stale'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'scraper-health'] })
+    },
+  })
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold mb-3">Price Refresh</h2>
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            Re-scrape all products with a source URL and update prices in the database. Runs
+            automatically every Sunday at 3am.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => refreshMutation.mutate()}
+              disabled={refreshMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              {refreshMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {refreshMutation.isPending ? 'Refreshing...' : 'Refresh All Prices'}
+            </Button>
+            {lastResult && !refreshMutation.isPending && (
+              <p className="text-sm text-muted-foreground">
+                {lastResult.updated} updated, {lastResult.failed} failed ({lastResult.durationMs}ms)
+              </p>
+            )}
+          </div>
+          {refreshMutation.isError && (
+            <p className="text-sm text-destructive mt-2">
+              {refreshMutation.error instanceof Error
+                ? refreshMutation.error.message
+                : 'Refresh failed'}
+            </p>
+          )}
+          {lastResult && !refreshMutation.isPending && lastResult.failures.length > 0 && (
+            <RefreshFailureList failures={lastResult.failures} />
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+function RefreshFailureList({ failures }: { failures: RefreshFailure[] }) {
+  return (
+    <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+      <p className="text-xs font-medium text-destructive mb-2">
+        {failures.length} product{failures.length !== 1 ? 's' : ''} failed to refresh
+      </p>
+      <ul className="flex flex-col gap-2">
+        {failures.map((f, i) => (
+          <li key={i} className="text-xs">
+            <span className="font-medium">{f.name}</span>
+            <span className="text-muted-foreground"> · {f.storeId}</span>
+            <span className="text-muted-foreground"> · {f.reason}</span>
+            {f.sourceUrl && (
+              <>
+                {' · '}
+                <a
+                  href={f.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-muted-foreground hover:text-foreground"
+                >
+                  view page
+                </a>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

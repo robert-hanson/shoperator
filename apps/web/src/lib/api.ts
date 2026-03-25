@@ -1,5 +1,24 @@
 import type { Category, StoreVariant, ComparisonResult, NewStoreVariant, UpdateStoreVariant } from '@shoperator/shared'
 
+export interface ScraperHealth {
+  costco: { healthy: boolean; lastChecked: string | null; error?: string }
+  aldi: { healthy: boolean; lastChecked: string | null; error?: string }
+}
+
+export interface RefreshFailure {
+  name: string
+  storeId: string
+  sourceUrl: string
+  reason: string
+}
+
+export interface RefreshResult {
+  updated: number
+  failed: number
+  durationMs: number
+  failures: RefreshFailure[]
+}
+
 const BASE = '/api/v1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -64,5 +83,8 @@ export function adminApi(token: string) {
         body: JSON.stringify({ url }),
         headers,
       }),
+    scraperHealth: () => request<ScraperHealth>('/admin/scraper-health', { headers }),
+    refreshPrices: () =>
+      request<RefreshResult>('/admin/refresh-prices', { method: 'POST', headers }),
   }
 }
