@@ -21,35 +21,46 @@ export function StoreProductPicker({
   const store = STORES[storeId]
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Store header */}
-      <div className="flex items-center gap-2 pb-1 border-b">
+    <div className="flex flex-col rounded-2xl border overflow-hidden">
+      {/* Store header — colored top accent + label */}
+      <div
+        className="px-4 py-3 flex items-center gap-2.5"
+        style={{
+          borderTop: `4px solid ${store.color}`,
+          backgroundColor: `${store.color}0d`,
+        }}
+      >
         <div
-          className="w-3 h-3 rounded-full"
+          className="w-3 h-3 rounded-full flex-shrink-0"
           style={{ backgroundColor: store.color }}
+          aria-hidden="true"
         />
-        <h3 className="font-semibold text-sm">{store.name}</h3>
+        <h3 className="font-semibold text-base">{store.name}</h3>
       </div>
 
-      {loading ? (
-        <>
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-        </>
-      ) : variants.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No products found for this category
-        </div>
-      ) : (
-        variants.map((v) => (
-          <ProductCard
-            key={v.id}
-            variant={v}
-            selected={selectedVariantId === v.id}
-            onSelect={() => onSelect(v.id)}
-          />
-        ))
-      )}
+      {/* Product list */}
+      <div className="flex flex-col gap-3 p-3">
+        {loading ? (
+          <>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </>
+        ) : variants.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+            No products found for this category
+          </div>
+        ) : (
+          variants.map((v) => (
+            <ProductCard
+              key={v.id}
+              variant={v}
+              selected={selectedVariantId === v.id}
+              accentColor={store.color}
+              onSelect={() => onSelect(v.id)}
+            />
+          ))
+        )}
+      </div>
     </div>
   )
 }

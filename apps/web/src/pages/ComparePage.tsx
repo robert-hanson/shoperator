@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useStoreVariants } from '@/hooks/useStoreVariants'
 import { useComparison } from '@/hooks/useComparison'
 import { useComparisonStore } from '@/store/comparisonStore'
 import { StoreProductPicker } from '@/components/comparison/StoreProductPicker'
+import { StoreSelector } from '@/components/comparison/StoreSelector'
 import { ComparisonResults } from '@/components/comparison/ComparisonResults'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,8 +14,16 @@ import { STORE_IDS } from '@shoperator/shared'
 
 export function ComparePage() {
   const { slug = '' } = useParams<{ slug: string }>()
+  const [activeStores, setActiveStores] = useState<StoreId[]>(STORE_IDS)
   const { data: allVariants, isLoading } = useStoreVariants(slug)
-  const { selectedVariants, setVariant, clearVariants, canCompare } = useComparisonStore()
+  const { selectedVariants, setVariant, clearVariant, clearVariants, canCompare } =
+    useComparisonStore()
+
+  function handleStoresChange(next: StoreId[]) {
+    const removed = activeStores.filter((id) => !next.includes(id))
+    removed.forEach((id) => clearVariant(id))
+    setActiveStores(next)
+  }
 
   const selectedIds = Object.values(selectedVariants).filter((id): id is string => Boolean(id))
   const { data: comparisonResult, isFetching: isComparing } = useComparison(
@@ -50,6 +60,14 @@ export function ComparePage() {
         </p>
       </div>
 
+      <div className="mb-6">
+        <StoreSelector
+          allStoreIds={STORE_IDS}
+          activeStoreIds={activeStores}
+          onChange={handleStoresChange}
+        />
+      </div>
+
       {isLoading ? (
         <div className="grid md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-3">
@@ -65,8 +83,8 @@ export function ComparePage() {
       ) : (
         <>
           {/* Store pickers */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {STORE_IDS.map((storeId) => (
+          <div className={activeStores.length > 1 ? 'grid md:grid-cols-2 gap-6' : 'grid gap-6'}>
+            {activeStores.map((storeId) => (
               <StoreProductPicker
                 key={storeId}
                 storeId={storeId}

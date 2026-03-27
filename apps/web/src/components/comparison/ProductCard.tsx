@@ -7,20 +7,23 @@ interface ProductCardProps {
   variant: StoreVariant
   selected: boolean
   onSelect: () => void
+  accentColor?: string
 }
 
-export function ProductCard({ variant, selected, onSelect }: ProductCardProps) {
+export function ProductCard({ variant, selected, onSelect, accentColor }: ProductCardProps) {
   const totalOz = `${variant.unitAmount}${variant.unitType.replace('_', ' ')}${variant.unitCount > 1 ? ` × ${variant.unitCount}` : ''}`
 
   return (
     <button
       onClick={onSelect}
+      style={
+        selected && accentColor
+          ? { borderColor: accentColor, backgroundColor: `${accentColor}0d` }
+          : undefined
+      }
       className={cn(
         'w-full text-left rounded-xl border-2 p-4 transition-all duration-150',
-        'hover:border-primary/50 hover:shadow-sm',
-        selected
-          ? 'border-primary bg-primary/5 shadow-sm'
-          : 'border-border bg-white',
+        selected ? 'shadow-sm' : 'border-border bg-white hover:border-muted-foreground/40 hover:shadow-sm',
       )}
     >
       <div className="flex gap-3 items-start">
@@ -52,9 +55,11 @@ export function ProductCard({ variant, selected, onSelect }: ProductCardProps) {
 
         {/* Selection indicator */}
         <div
+          style={selected && accentColor ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}
           className={cn(
             'w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-colors',
-            selected ? 'border-primary bg-primary' : 'border-muted-foreground/30',
+            !selected && 'border-muted-foreground/30',
+            selected && !accentColor && 'border-primary bg-primary',
           )}
         >
           {selected && (
