@@ -4,6 +4,7 @@ import { db } from '../config/database.js'
 import { storeVariants } from '../db/schema.js'
 import { adminAuth } from '../middleware/adminAuth.js'
 import { scrapeAssist } from '../services/scrapeAssistService.js'
+import { discoverProducts } from '../services/productDiscoveryService.js'
 import { runPriceRefresh } from '../jobs/priceRefreshJob.js'
 import { getScraperHealth } from '../jobs/scraperHealthCheck.js'
 
@@ -119,6 +120,36 @@ adminRouter.post('/scrape-assist', async (req, res, next) => {
 // GET /api/v1/admin/scraper-health
 adminRouter.get('/scraper-health', (_req, res) => {
   res.json(getScraperHealth())
+})
+
+// POST /api/v1/admin/discover
+// Accepts a list of product URLs, scrapes each, validates against the given
+// category, and returns candidates for admin review. Nothing is saved automatically.
+adminRouter.post('/discover', async (req, res, next) => {
+  try {
+    const { urls, categorySlug } = req.body as { urls?: unknown; categorySlug?: unknown }
+    if (!Array.isArray(urls) || urls.length === 0) {
+      res.status(400).json({ error: 'urls must be a non-empty array of strings' })
+      return
+    }
+    if (urls.length > 20) {
+      res.status(400).json({ error: 'Maximum 20 URLs per request' })
+      return
+    }
+    if (typeof categorySlug !== 'string' || !categorySlug) {
+      res.status(400).json({ error: 'categorySlug is required' })
+      return
+    }
+    const stringUrls = urls.filter((u): u is string => typeof u === 'string')
+    const result = await discoverProducts(stringUrls, categorySlug)
+    res.json(result)
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('Category not found')) {
+      res.status(404).json({ error: err.message })
+      return
+    }
+    next(err)
+  }
 })
 
 // POST /api/v1/admin/refresh-prices

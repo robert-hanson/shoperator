@@ -9,6 +9,7 @@ export interface RefreshFailure {
   storeId: string
   sourceUrl: string
   reason: string
+  kind: 'no_price' | 'anomaly' | 'scrape_error'
 }
 
 export interface RefreshResult {
@@ -42,7 +43,21 @@ export async function runPriceRefresh(): Promise<RefreshResult> {
       if (!data.priceCents) {
         const reason = 'No price extracted'
         console.warn(`[price-refresh] ${reason} for "${variant.name}" — skipping. (${variant.sourceUrl})`)
-        failures.push({ name: variant.name, storeId: variant.storeId, sourceUrl: variant.sourceUrl!, reason })
+        failures.push({ name: variant.name, storeId: variant.storeId, sourceUrl: variant.sourceUrl!, reason, kind: 'no_price' })
+        failed++
+        continue
+      }
+
+      // Price sanity check: if the new price deviates by more than ±50% from the
+      // stored price it is almost certainly a scrape error (wrong product, membership
+      // fee, etc.). Mark the variant stale so admin can review rather than silently
+      // corrupting the DB.
+      const ratio = data.priceCents / variant.priceCents
+      if (ratio < 0.5 || ratio > 1.5) {
+        const reason = `Price anomaly: stored $${(variant.priceCents / 100).toFixed(2)}, scraped $${(data.priceCents / 100).toFixed(2)}`
+        console.warn(`[price-refresh] ${reason} for "${variant.name}" — skipping.`)
+        failures.push({ name: variant.name, storeId: variant.storeId, sourceUrl: variant.sourceUrl!, reason, kind: 'anomaly' })
+        await db.update(storeVariants).set({ isStale: true }).where(eq(storeVariants.id, variant.id))
         failed++
         continue
       }
@@ -65,7 +80,7 @@ export async function runPriceRefresh(): Promise<RefreshResult> {
     } catch (err) {
       const reason = err instanceof Error ? err.message : 'Unknown error'
       console.error(`[price-refresh] Failed to update "${variant.name}":`, err)
-      failures.push({ name: variant.name, storeId: variant.storeId, sourceUrl: variant.sourceUrl!, reason })
+      failures.push({ name: variant.name, storeId: variant.storeId, sourceUrl: variant.sourceUrl!, reason, kind: 'scrape_error' })
       failed++
     }
   }

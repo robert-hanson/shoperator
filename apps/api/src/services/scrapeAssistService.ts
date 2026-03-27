@@ -185,7 +185,9 @@ export async function scrapeAssist(url: string): Promise<Partial<NewStoreVariant
 
     const name = jsonLd.name ?? ogTitle ?? titleTag ?? undefined
     const imageUrl = jsonLd.image ?? ogImage ?? undefined
-    const priceCents = jsonLd.price ?? regexPrice ?? undefined
+    // Don't use regex fallback for Costco — their pages are JS-rendered so the first
+    // dollar amount in the static HTML is not necessarily the product price.
+    const priceCents = jsonLd.price ?? (store !== 'costco' ? regexPrice : undefined) ?? undefined
 
     // 3. Unit extraction: store-specific selectors → parse from title → parse from description
     let unitData: ParsedUnit | null = null

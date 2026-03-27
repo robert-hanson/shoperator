@@ -1,4 +1,10 @@
-import type { Category, StoreVariant, ComparisonResult, NewStoreVariant, UpdateStoreVariant } from '@shoperator/shared'
+import type {
+  Category,
+  StoreVariant,
+  ComparisonResult,
+  NewStoreVariant,
+  UpdateStoreVariant,
+} from '@shoperator/shared'
 
 export interface ScraperHealth {
   costco: { healthy: boolean; lastChecked: string | null; error?: string }
@@ -10,6 +16,21 @@ export interface RefreshFailure {
   storeId: string
   sourceUrl: string
   reason: string
+  kind: 'no_price' | 'anomaly' | 'scrape_error'
+}
+
+export interface DiscoveryCandidate {
+  sourceUrl: string
+  store: 'costco' | 'aldi' | 'unknown'
+  scraped: Partial<NewStoreVariant>
+  isDuplicate: boolean
+  valid: boolean
+  warning?: string
+}
+
+export interface DiscoveryResult {
+  candidates: DiscoveryCandidate[]
+  skippedUrls: string[]
 }
 
 export interface RefreshResult {
@@ -86,5 +107,11 @@ export function adminApi(token: string) {
     scraperHealth: () => request<ScraperHealth>('/admin/scraper-health', { headers }),
     refreshPrices: () =>
       request<RefreshResult>('/admin/refresh-prices', { method: 'POST', headers }),
+    discover: (urls: string[], categorySlug: string) =>
+      request<DiscoveryResult>('/admin/discover', {
+        method: 'POST',
+        body: JSON.stringify({ urls, categorySlug }),
+        headers,
+      }),
   }
 }

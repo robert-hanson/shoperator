@@ -7,6 +7,7 @@ import {
   boolean,
   timestamp,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -44,6 +45,12 @@ export const storeVariants = pgTable(
     categoryIdx: index('idx_variants_category').on(table.categoryId),
     storeIdx: index('idx_variants_store').on(table.storeId),
     staleIdx: index('idx_variants_stale').on(table.isStale),
+    // Unique per (category, store, product name) — enables idempotent seeding
+    categoryStoreNameUniq: uniqueIndex('idx_variants_category_store_name').on(
+      table.categoryId,
+      table.storeId,
+      table.name,
+    ),
   }),
 )
 
