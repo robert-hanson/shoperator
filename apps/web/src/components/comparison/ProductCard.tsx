@@ -8,9 +8,10 @@ interface ProductCardProps {
   selected: boolean
   onSelect: () => void
   accentColor?: string
+  categoryEmoji?: string | undefined
 }
 
-export function ProductCard({ variant, selected, onSelect, accentColor }: ProductCardProps) {
+export function ProductCard({ variant, selected, onSelect, accentColor, categoryEmoji }: ProductCardProps) {
   const totalOz = `${variant.unitAmount}${variant.unitType.replace('_', ' ')}${variant.unitCount > 1 ? ` × ${variant.unitCount}` : ''}`
 
   return (
@@ -37,7 +38,9 @@ export function ProductCard({ variant, selected, onSelect, accentColor }: Produc
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <Package className="w-6 h-6" />
+              {categoryEmoji
+                ? <span className="text-2xl">{categoryEmoji}</span>
+                : <Package className="w-6 h-6" />}
             </div>
           )}
         </div>

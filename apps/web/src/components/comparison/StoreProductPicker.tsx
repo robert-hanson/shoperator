@@ -9,6 +9,7 @@ interface StoreProductPickerProps {
   selectedVariantId: string | undefined
   onSelect: (variantId: string) => void
   loading?: boolean
+  categoryEmoji?: string | undefined
 }
 
 export function StoreProductPicker({
@@ -17,6 +18,7 @@ export function StoreProductPicker({
   selectedVariantId,
   onSelect,
   loading,
+  categoryEmoji,
 }: StoreProductPickerProps) {
   const store = STORES[storeId]
 
@@ -57,6 +59,7 @@ export function StoreProductPicker({
               selected={selectedVariantId === v.id}
               accentColor={store.color}
               onSelect={() => onSelect(v.id)}
+              categoryEmoji={categoryEmoji}
             />
           ))
         )}

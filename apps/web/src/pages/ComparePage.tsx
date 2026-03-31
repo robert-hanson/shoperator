@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useStoreVariants } from '@/hooks/useStoreVariants'
+import { useCategories } from '@/hooks/useCategories'
 import { useComparison } from '@/hooks/useComparison'
 import { useComparisonStore } from '@/store/comparisonStore'
 import { StoreProductPicker } from '@/components/comparison/StoreProductPicker'
@@ -16,6 +17,8 @@ export function ComparePage() {
   const { slug = '' } = useParams<{ slug: string }>()
   const [activeStores, setActiveStores] = useState<StoreId[]>(STORE_IDS)
   const { data: allVariants, isLoading } = useStoreVariants(slug)
+  const { data: categories } = useCategories()
+  const categoryEmoji = categories?.find((c) => c.slug === slug)?.iconEmoji
   const { selectedVariants, setVariant, clearVariant, clearVariants, canCompare } =
     useComparisonStore()
 
@@ -91,6 +94,7 @@ export function ComparePage() {
                 variants={variantsByStore(storeId)}
                 selectedVariantId={selectedVariants[storeId]}
                 onSelect={(id) => setVariant(storeId, id)}
+                categoryEmoji={categoryEmoji}
               />
             ))}
           </div>
